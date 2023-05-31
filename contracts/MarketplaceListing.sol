@@ -63,6 +63,7 @@ contract MarketplaceListing {
     }
 
     function acceptOffer(uint256 _listingId, uint256 _offerId) public {
+        //add check if offer is still on CREATED status
         require(_offerId < offersCounter, "This offer doesn't exists.");
         require(msg.sender == listings[offers[_offerId].listingId].seller, "The listing that received this offer is not yours.");
         offers[_offerId].status = OfferStatus.ACCEPTED;
@@ -71,6 +72,7 @@ contract MarketplaceListing {
     }
 
     function declineOffer(uint256 _offerId) public {
+        //add check if offer is still on CREATED status
         require(_offerId < offersCounter, "This offer doesn't exists.");
         require(msg.sender == listings[offers[_offerId].listingId].seller, "The listing that received this offer is not yours.");
         offers[_offerId].status = OfferStatus.DECLINED;
