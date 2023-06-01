@@ -1,0 +1,97 @@
+pragma ever-solidity >= 0.61.2;
+pragma AbiHeader expire;
+pragma AbiHeader pubkey;
+
+contract Marketplace {
+    uint256 static _nonce;
+
+    event listingCreated(uint256 _listingId);
+    event offerAccepted(uint256 _listingId, uint256 _offerId);
+    event offerDeclined(uint256 _listingId, uint256 _offerId);
+    event offerReceived(uint _listingId, uint _offerId);
+
+    enum OfferStatus{ PENDING, DECLINED, ACCEPTED }
+    struct Listing {
+        string title;
+        string description;
+        uint256 price;
+        address seller;
+        bool sold;
+        uint256 offersCounter;
+        mapping(uint256 => Offer) offers;
+    }
+
+     struct Offer {
+        uint256 amount;         // Amount buyer is offering
+        address buyer;      // Buyer wallet 
+        OfferStatus status; // CREATED, DECLINED, ACCEPTED 
+    }
+
+    mapping(uint256 => Listing) public listings;
+    uint256 listingsCounter = 0;
+
+    function totalListings() public view returns (uint) {
+        return listingsCounter;
+    }
+
+    function totalOffers(uint256 _listingId) public view returns (uint) {
+        return listings[_listingId].offersCounter;
+    }
+
+    function createListing(string _title, string _description, uint256 _price) public {
+        require(_price > 0,100, "Price must be greater than zero");
+        Listing newListing = listings[listingsCounter];
+        newListing.title = _title;
+        newListing.description = _description;
+        newListing.price = _price;
+        newListing.seller = msg.sender;
+        newListing.offersCounter = 0;
+        newListing.sold = false;
+        emit listingCreated(listingsCounter);
+        listingsCounter++;
+    }
+
+    function makeOffer(uint256 _amount, uint256 _listingId) public {
+        require(_amount > 0, 100, "Price must be greater than zero");
+        require(_listingId < listingsCounter, 101 ,"This listing doesn't exists.");
+        require(msg.sender != listings[_listingId].seller, 102, "You cannot make an Offer for your own listing");
+        require(listings[_listingId].sold == false, 103, "This listing is closed.");
+        Offer newOffer = Offer(_amount, msg.sender, OfferStatus.PENDING);
+        listings[_listingId].offers[listings[_listingId].offersCounter] = newOffer;
+        //if amounts match automatically accepting the offer
+        if(listings[_listingId].price == _amount) _acceptOffer(_listingId, listings[_listingId].offersCounter);
+        emit offerReceived( _listingId, listings[_listingId].offersCounter);
+        listings[_listingId].offersCounter++;
+    }
+
+    function _acceptOffer(uint256 _listingId, uint256 _offerId) private {
+        listings[_listingId].offers[_offerId].status = OfferStatus.ACCEPTED;
+        listings[_listingId].sold = true;
+        emit offerAccepted(_listingId, _offerId);
+        //transfer funds
+    }
+
+    function acceptOffer(uint256 _listingId, uint256 _offerId) public {
+        require(_offerId < listings[_listingId].offersCounter,101, "This offer doesn't exists.");
+        require(msg.sender == listings[_listingId].seller, 104, "The listing that received this offer is not yours.");
+        require(listings[_listingId].offers[_offerId].status == OfferStatus.PENDING, 105,  "status != OfferStatus.PENDING.");
+        listings[_listingId].offers[_offerId].status = OfferStatus.ACCEPTED;
+        listings[_listingId].sold = true;
+        emit offerAccepted(_listingId, _offerId);
+        //transfer funds
+    }
+
+    function declineOffer(uint256 _listingId, uint256 _offerId) public {
+        require(_offerId < listings[_listingId].offersCounter,101 , "This offer doesn't exists.");
+        require(msg.sender == listings[_listingId].seller,104, "The listing that received this offer is not yours.");
+        require(listings[_listingId].offers[_offerId].status == OfferStatus.PENDING,105, "status != OfferStatus.PENDING.");
+        listings[_listingId].offers[_offerId].status = OfferStatus.ACCEPTED;
+        emit offerDeclined(_listingId, _offerId);
+        //refund offer sender
+    }
+
+    function getListingOffer(uint256 _listingId, uint256 _offerId) public view returns (Offer) {
+                return listings[_listingId].offers[_offerId];
+    }
+}
+

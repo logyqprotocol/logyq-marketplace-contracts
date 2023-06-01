@@ -49,8 +49,13 @@ Thumbs.db
 *.mov
 *.wmv
 
+#Build files
+build/
+.temp/
 
 
 #Env files
 .env
+
+
 

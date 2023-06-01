@@ -8,9 +8,9 @@ declare global {
 const LOCAL_NETWORK_ENDPOINT = process.env.NETWORK_ENDPOINT || "http://localhost/graphql";
 const DEV_NET_NETWORK_ENDPOINT = process.env.DEV_NET_NETWORK_ENDPOINT || "https://devnet-sandbox.evercloud.dev/graphql";
 
-const VENOM_TESTNET_ENDPOINT = process.env.VENOM_TESTNET_ENDPOINT || "https://jrpc-devnet.venom.foundation/";
+const VENOM_TESTNET_ENDPOINT = process.env.VENOM_TESTNET_ENDPOINT || "https://jrpc-devnet.venom.foundation/rpc";
 const VENOM_TESTNET_TRACE_ENDPOINT =
-  process.env.VENOM_TESTNET_TRACE_ENDPOINT || "https://gql-devnet.venom.network/graphql";
+  process.env.VENOM_TESTNET_TRACE_ENDPOINT || "https://gql-devnet.venom.foundation/graphql";
 
 // Create your own link on https://dashboard.evercloud.dev/
 const MAIN_NET_NETWORK_ENDPOINT = process.env.MAIN_NET_NETWORK_ENDPOINT || "https://mainnet.evercloud.dev/XXX/graphql";
@@ -97,21 +97,21 @@ const config: LockliftConfig = {
         type: "jrpc",
         group: "dev",
         data: {
-          endpoint: VENOM_TESTNET_ENDPOINT,
+          endpoint: VENOM_TESTNET_ENDPOINT
         },
       },
       giver: {
-        address: "0:0000000000000000000000000000000000000000000000000000000000000000",
-        phrase: "phrase",
+        address: "0:b15f116ef9e204533824d33028562bb8e948c18853fe4adb8fddd809efe605df",
+        phrase: "ticket three bid current course select luxury robust dismiss inmate question beyond",
         accountId: 0,
       },
       tracing: {
-        endpoint: VENOM_TESTNET_TRACE_ENDPOINT,
+        endpoint: VENOM_TESTNET_TRACE_ENDPOINT
       },
       keys: {
         // Use everdev to generate your phrase
         // !!! Never commit it in your repos !!!
-        // phrase: "action inject penalty envelope rabbit element slim tornado dinner pizza off blood",
+        phrase: "ticket three bid current course select luxury robust dismiss inmate question beyond",
         amount: 20,
       },
     },
