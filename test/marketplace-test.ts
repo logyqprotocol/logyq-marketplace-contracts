@@ -1,13 +1,34 @@
 import { expect } from "chai";
-import { Contract, Signer } from "locklift";
+import { Address, Contract, Signer, WalletTypes, toNano } from "locklift";
 import { FactorySource } from "../build/factorySource";
+import { Account } from "everscale-standalone-client";
 
 let marketplace: Contract<FactorySource["Marketplace"]>;
-let signer: Signer;
+let deployer: Signer;
+let signer1: Signer;
+let signer2: Signer;
+
+let account: { listerAccount: any; offerMakerAccount: any; };
 
 describe("Test Marketplace contract", async function () {
   before(async () => {
-    signer = (await locklift.keystore.getSigner("0"))!;
+    deployer = (await locklift.keystore.getSigner("0"))!;
+    signer1 = (await locklift.keystore.getSigner("1"))!;
+    signer2 = (await locklift.keystore.getSigner("2"))!;
+
+    const { account: listerAccount } = await locklift.factory.accounts.addNewAccount({
+      type: WalletTypes.WalletV3,
+      value: toNano(10000),
+      publicKey: signer1.publicKey,
+    });
+
+    const { account: offerMakerAccount } = await locklift.factory.accounts.addNewAccount({
+      type: WalletTypes.WalletV3,
+      value: toNano(10000),
+      publicKey: signer2.publicKey,
+    });
+
+    account = { listerAccount : listerAccount, offerMakerAccount: offerMakerAccount };
   });
 
   describe("Contracts", async function () {
@@ -22,7 +43,7 @@ describe("Test Marketplace contract", async function () {
     it("Deploy contract", async function () {
       const { contract } = await locklift.factory.deployContract({
         contract: "Marketplace",
-        publicKey: signer.publicKey,
+        publicKey: deployer.publicKey,
         initParams: {
           _nonce: locklift.utils.getRandomNonce(),
         },
@@ -30,6 +51,7 @@ describe("Test Marketplace contract", async function () {
         constructorParams: undefined,
       });
       marketplace = contract;
+      console.log(`Marketplace deployed at: ${marketplace.address.toString()}`);
 
       expect(await locklift.provider.getBalance(marketplace.address).then(balance => Number(balance))).to.be.above(0);
     });
@@ -45,11 +67,17 @@ describe("Test Marketplace contract", async function () {
           _description: description,
           _price: price,
         })
-        .sendExternal({ publicKey: signer.publicKey });
+        .send({
+          from: account.listerAccount.address,
+          amount: String(Number(toNano(1))),
+        });
 
-      const totalListings = await marketplace.methods.totalListings().call();
+      const totalListings = await marketplace.methods.totalListings({}).call();
 
-      expect(Number(totalListings)).to.be.equal(1, "Wrong number of total listings");
+      const listing = await marketplace.methods.getListing({ _listingId: 0 });
+
+      //TODO: check listings content
+      expect(Number(totalListings._listingCounter)).to.be.equal(1, "Wrong number of total listings");
     });
 
     it("Make offer", async function () {
@@ -61,11 +89,14 @@ describe("Test Marketplace contract", async function () {
           _amount: amount,
           _listingId: listingId,
         })
-        .sendExternal({ publicKey: signer.publicKey });
+        .send({
+          from: account.offerMakerAccount.address,
+          amount: String(Number(toNano(1))),
+        });
 
       const totalOffers = await marketplace.methods.totalOffers({ _listingId: listingId }).call();
 
-      expect(Number(totalOffers)).to.be.equal(1, "Wrong number of total offers for the listing");
+      expect(Number(totalOffers._offersCounter)).to.be.equal(1, "Wrong number of total offers for the listing");
     });
 
     it("Accept offer", async function () {
@@ -77,9 +108,12 @@ describe("Test Marketplace contract", async function () {
           _listingId: listingId,
           _offerId: offerId,
         })
-        .sendExternal({ publicKey: signer.publicKey });
+        .send({
+          from: account.listerAccount.address,
+          amount: String(Number(toNano(1))),
+        });
 
-      const listing = await marketplace.methods.listings().call();
+      const listing = await marketplace.methods.getListing({ _listingId: listingId }).call();
       const offer = await marketplace.methods
         .getListingOffer({
           _listingId: listingId,
@@ -87,27 +121,31 @@ describe("Test Marketplace contract", async function () {
         })
         .call();
 
-      expect(listing.listings[0][1].sold).to.be.equal(true, "Listing should be marked as sold");
-      expect(Number(offer.value0.status)).to.be.equal(2, "Offer status should be ACCEPTED");
+      expect(listing.sold).to.be.equal(true, "Listing should be marked as sold");
+      expect(Number(offer.status)).to.be.equal(2, "Offer status should be ACCEPTED");
     });
 
     it("Decline offer", async function () {
       const listingId = 0;
       const offerId = 0;
 
-      await marketplace.methods.declineOffer({
-        _listingId: listingId,
-        _offerId: offerId,
-      }).sendExternal({ publicKey: signer.publicKey });
+      await marketplace.methods
+        .declineOffer({
+          _listingId: listingId,
+          _offerId: offerId,
+        })
+        .sendExternal({ publicKey: signer2.publicKey });
 
-      const listing = await marketplace.methods.listings().call();
-      const offer = await marketplace.methods.getListingOffer({
-        _listingId: listingId,
-        _offerId: offerId,
-      }).call();
+      const listing = await marketplace.methods.getListing({ _listingId: listingId }).call();
+      const offer = await marketplace.methods
+        .getListingOffer({
+          _listingId: listingId,
+          _offerId: offerId,
+        })
+        .call();
 
-      expect(listing.listings[0][1].sold).to.be.equal(false, "Listing should not be marked as sold");
-      expect(Number(offer.value0.status)).to.be.equal(1, "Offer status should be DECLINED");
+      expect(listing.sold).to.be.equal(false, "Listing should not be marked as sold");
+      expect(Number(offer.status)).to.be.equal(1, "Offer status should be DECLINED");
     });
   });
 });
