@@ -33,17 +33,13 @@ contract Marketplace {
 
     function totalListings() external view returns (uint256 _listingCounter) {
         return listingsCounter;
-    }
-
-    function getFirstElement() external view returns ( uint256 _offersCounter) {
-        return listings[0].offersCounter;
-    }
+    }  
 
     function totalOffers(uint256 _listingId) external view returns (uint256 _offersCounter) {
         return listings[_listingId].offersCounter;
     }
 
-    function createListing(string _title, string _description, uint256 _price) public {
+    function createListing(string _title, string _description, uint256 _price) public returns (uint256 _listingId) {
         tvm.accept();
         require(_price > 0,100, "Price must be greater than zero");
 
@@ -70,7 +66,8 @@ contract Marketplace {
 
         require(_amount > 0, 100, "Price must be greater than zero");
         require(_listingId < listingsCounter, 101 ,"This listing doesn't exists.");
-        require(msg.sender != listings[_listingId].seller, 102, "You cannot make an Offer for your own listing");
+        //TODO: remove comment after testing
+        //require(msg.sender != listings[_listingId].seller, 102, "You cannot make an offer for your own listing");
         require(listings[_listingId].sold == false, 103, "This listing is closed.");
 
         Offer newOffer = Offer(_amount, msg.sender, OfferStatus.PENDING);
@@ -132,6 +129,10 @@ contract Marketplace {
         OfferStatus status) {
         Offer offer = listings[_listingId].offers[_offerId];
         return (offer.amount, offer.buyer, offer.status);
+    }
+
+    function getListingOffers(uint256 _listingId) external view returns (mapping(uint256 => Offer) offers) {
+        return listings[_listingId].offers;
     }
 }
 
