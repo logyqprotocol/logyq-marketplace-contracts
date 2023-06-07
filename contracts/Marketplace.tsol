@@ -19,6 +19,7 @@ contract Marketplace {
         address seller;
         bool sold;
         uint256 offersCounter;
+        uint256 timestamp;
         mapping(uint256 => Offer) offers;
     }
 
@@ -26,9 +27,11 @@ contract Marketplace {
         uint256 amount;         // Amount buyer is offering
         address buyer;      // Buyer wallet 
         OfferStatus status; // CREATED, DECLINED, ACCEPTED 
+        uint256 timestamp;
     }
 
     mapping(uint256 => Listing) public listings;
+    mapping(address => uint256[]) public listingsIdsBySeller;
     uint256 listingsCounter = 0;
 
     function totalListings() external view returns (uint256 _listingCounter) {
@@ -39,7 +42,7 @@ contract Marketplace {
         return listings[_listingId].offersCounter;
     }
 
-    function createListing(string _title, string _description, uint256 _price) public returns (uint256 _listingId) {
+    function createListing(string _title, string _description, uint256 _price) public {
         tvm.accept();
         require(_price > 0,100, "Price must be greater than zero");
 
@@ -52,13 +55,19 @@ contract Marketplace {
         seller: msg.sender,
         sold: false,
         offersCounter: 0,
-        offers: _offers
+        offers: _offers,
+        timestamp: block.timestamp
         });
 
         listings[listingsCounter] = newListing;
+        listingsIdsBySeller[msg.sender].push(listingsCounter);
         emit listingCreated(listingsCounter);
         listingsCounter++;
     }
+
+    function getListingIdsBySeller(address _seller) external view returns (uint256[] _listingIds){
+        return listingsIdsBySeller[_seller];
+    } 
 
     function makeOffer(uint256 _amount, uint256 _listingId) public {
 
@@ -70,7 +79,7 @@ contract Marketplace {
         //require(msg.sender != listings[_listingId].seller, 102, "You cannot make an offer for your own listing");
         require(listings[_listingId].sold == false, 103, "This listing is closed.");
 
-        Offer newOffer = Offer(_amount, msg.sender, OfferStatus.PENDING);
+        Offer newOffer = Offer(_amount, msg.sender, OfferStatus.PENDING, block.timestamp);
 
         listings[_listingId].offers[listings[_listingId].offersCounter] = newOffer;
         //if amounts match automatically accepting the offer
