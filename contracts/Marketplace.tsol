@@ -75,8 +75,7 @@ contract Marketplace {
 
         require(_amount > 0, 100, "Price must be greater than zero");
         require(_listingId < listingsCounter, 101 ,"This listing doesn't exists.");
-        //TODO: remove comment after testing
-        //require(msg.sender != listings[_listingId].seller, 102, "You cannot make an offer for your own listing");
+        require(msg.sender != listings[_listingId].seller, 102, "You cannot make an offer for your own listing");
         require(listings[_listingId].sold == false, 103, "This listing is closed.");
 
         Offer newOffer = Offer(_amount, msg.sender, OfferStatus.PENDING, block.timestamp);
@@ -143,5 +142,6 @@ contract Marketplace {
     function getListingOffers(uint256 _listingId) external view returns (mapping(uint256 => Offer) offers) {
         return listings[_listingId].offers;
     }
+    
 }
 
